@@ -1,6 +1,6 @@
 # 🎬 BigCurrencyETL
 
-A dramatic ETL pipeline that extracts fiat exchange rates from NBP and crypto prices from CoinGecko, transforms and merges them, then loads into PostgreSQL.
+A dramatic ETL pipeline that extracts fiat exchange rates from NBP and crypto prices from CoinGecko, transforms and merges them, then loads into PostgreSQL!
 
 ---
 
