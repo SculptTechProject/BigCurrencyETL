@@ -1,77 +1,96 @@
-# 🎬 BigCurrencyETL
+# BigCurrencyETL
 
-A dramatic ETL pipeline that extracts fiat exchange rates from NBP and crypto prices from CoinGecko, transforms and merges them, then loads into PostgreSQL!
+Lekki pipeline ETL w Pythonie, który **raz dziennie** pobiera kursy walut z NBP oraz ceny Bitcoina i Etheru z CoinGecko, łączy je w jeden zbiór danych i zapisuje do PostgreSQL. 
 
 ---
 
-## 📋 Configuration
+## Spis treści
 
-1. **Copy** the example config and fill in your credentials:
+1. [Wymagania](#wymagania)
+2. [Konfiguracja](#konfiguracja)
+3. [Szybki start](#szybki-start)
+4. [Uruchomienie w Docker Compose](#docker-compose)
+5. [Kroki ETL](#kroki-etl)
+6. [Przykładowe logi](#przykladowe-logi)
+7. [Autor](#autor)
+
+---
+
+## Wymagania  <a name="wymagania"></a>
+
+* Python ≥ 3.10
+* PostgreSQL ≥ 14
+* (Opcjonalnie) Docker + Docker Compose
+
+---
+
+## Konfiguracja  <a name="konfiguracja"></a>
+
+1. Skuduj przykładowy plik konfiguracyjny i uzupełnij dane dostępu do bazy:
 
    ```bash
    cp config.example.yaml config.yaml
    ```
-2. **Edit** `config.yaml`:
+2. Edytuj `config.yaml`:
 
    ```yaml
    postgres:
-     host: YOUR_HOST
-     port: YOUR_PORT
-     db: YOUR_DB
-     user: YOUR_USER
-     password: YOUR_PASSWORD
-     sslmode: require
-     sslrootcert: ca.pem
+     host: db            # nazwa usługi / host
+     port: 5432
+     db:   etl
+     user: etl
+     password: etl
+     sslmode: disable    # lokalnie "disable", w chmurze np. "require"
 
    sources:
-     nbp_api: "http://api.nbp.pl/api/exchangerates/tables/A?format=json"
+     nbp_api:    "http://api.nbp.pl/api/exchangerates/tables/A?format=json"
      crypto_api: "https://api.coingecko.com/api/v3/simple/price?ids=bitcoin,ethereum&vs_currencies=usd"
    ```
-3. **Download** the Aiven CA certificate (`ca.pem`) and place it next to your `config.yaml`.
 
-> 🔒 Sensitive files (`config.yaml`, `.env`) are ignored by Git. See `.gitignore`.
-
----
-
-## 🚦 Steps
-
-1. **Extract** NBP rates & Crypto prices
-2. **Transform** into unified table with timestamps
-3. **Load** into `exchange_rates` table in PostgreSQL
+> Pliki z danymi wrażliwymi (`config.yaml`, `.env`) są ignorowane przez Git → patrz `.gitignore`.
 
 ---
 
-## 🚀 Run Locally
+## Szybki start  <a name="szybki-start"></a>
 
 ```bash
+python -m venv .venv && source .venv/bin/activate   # Windows: .venv\Scripts\activate
 pip install -r requirements.txt
-python main.py
+python main.py                                      # uruchamia cały pipeline
 ```
 
 ---
 
-## 🐳 Docker (optional)
+## Docker Compose  <a name="docker-compose"></a>
 
-1. Build the image:
+Jeśli wolisz kontenery:
 
-   ```bash
-   docker build -t bigcurrencyetl .
-   ```
-
-docker build -t bigcurrencyetl .
-
-````
-2. Run the container (mount your config & cert):  
 ```bash
-docker run --rm \
--v $(pwd)/config.yaml:/app/config.yaml \
--v $(pwd)/ca.pem:/app/ca.pem \
-bigcurrencyetl
-````
+docker compose up --build
+```
+
+Docker Compose postawi Postgresa i odpali pipeline w osobnym kontenerze. Logi pojawią się w konsoli.
 
 ---
 
-## 📈 Logs Sample
+## Kroki ETL  <a name="kroki-etl"></a>
+
+1. **Extract** – pobranie kursów NBP oraz cen krypto z CoinGecko
+2. **Transform** – ujednolicenie danych, dodanie timestampu `fetched_at`
+3. **Load** – zapis do tabeli `currency_rates` w PostgreSQL
+
+### Mini‑diagram
+
+```mermaid
+graph TD
+    NBP_API[NBP API] --> T(Transform)
+    CG_API[CoinGecko API] --> T
+    T --> PG[(PostgreSQL)]
+```
+
+---
+
+## Przykładowe logi  <a name="przykladowe-logi"></a>
 
 ```
 === BigCurrencyETL START ===
@@ -80,17 +99,12 @@ bigcurrencyetl
 [3/4] Transforming data…
   → Combined 30 fiat + 2 crypto rows
 [4/4] Loading into PostgreSQL…
-✅ Load complete.
+✓ Load complete.
 === BigCurrencyETL FINISHED ===
 ```
----
-
-## 🪃 Sample Output
-
-![img.png](img.png)
 
 ---
 
-## 🧑‍💻 Author
+## Autor  <a name="autor"></a>
 
-Mateusz Dalke – [GitHub](https://github.com/SculptTechProject) | [LinkedIn](https://linkedin.com/in/mateusz-dalke-12b56a2a8)
+Mateusz Dalke · [GitHub](https://github.com/SculptTechProject) · [LinkedIn](https://linkedin.com/in/mateusz-dalke-12b56a2a8)
