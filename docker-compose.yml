@@ -1,0 +1,17 @@
+version: "3.9"
+services:
+  db:
+    image: postgres:16
+    environment:
+      POSTGRES_USER: etl
+      POSTGRES_PASSWORD: etl
+      POSTGRES_DB: etl
+
+  etl:
+    build: .
+    depends_on: [db]
+    environment:
+      DB_HOST: db
+      DB_USER: etl
+      DB_PASS: etl
+      DB_NAME: etl

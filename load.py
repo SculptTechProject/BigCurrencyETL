@@ -1,30 +1,46 @@
-import psycopg2
-from psycopg2.extras import execute_values
+from sqlalchemy import create_engine
+from sqlalchemy.exc import SQLAlchemyError
 
-def load(df, cfg):
-    print("[4/4] Loading into PostgreSQL…")
-    conn = psycopg2.connect(
-        host=cfg['postgres']['host'],
-        port=cfg['postgres']['port'],
-        dbname=cfg['postgres']['db'],
-        user=cfg['postgres']['user'],
-        password=cfg['postgres']['password'],
-        sslmode=cfg['postgres']['sslmode'],
-        sslrootcert=cfg['postgres']['sslrootcert']
+
+def _build_connect_args(pg_cfg: dict) -> dict:
+    """
+    Buduje connect_args tylko z istniejących pól.
+    Dzięki temu sslmode / sslrootcert są opcjonalne.
+    """
+    args = {}
+    if pg_cfg.get("sslmode"):
+        args["sslmode"] = pg_cfg["sslmode"]
+    if pg_cfg.get("sslrootcert"):
+        args["sslrootcert"] = pg_cfg["sslrootcert"]
+    return args
+
+
+def load(df, cfg, table: str = "currency_rates") -> None:
+    """Zapisuje df do tabeli w Postgresie."""
+    pg = cfg["postgres"]
+
+    conn_str = (
+        f"postgresql+psycopg2://{pg['user']}:{pg['password']}"
+        f"@{pg['host']}:{pg['port']}/{pg['db']}"
     )
-    with conn:
-        with conn.cursor() as cur:
-            # create table if not exists
-            cur.execute("""
-                CREATE TABLE IF NOT EXISTS exchange_rates (
-                  code TEXT,
-                  rate NUMERIC,
-                  type TEXT,
-                  fetched_at TIMESTAMP
-                );
-            """)
-            tuples = [tuple(x) for x in df[['code','rate','type','fetched_at']].values]
-            sql = "INSERT INTO exchange_rates (code,rate,type,fetched_at) VALUES %s"
-            execute_values(cur, sql, tuples)
-    conn.close()
-    print("✅ Load complete.")
+    engine = create_engine(conn_str, connect_args=_build_connect_args(pg))
+
+    print(f"    → Inserting {len(df)} rows into '{table}'…")
+    try:
+        with engine.begin() as conn:
+            df.to_sql(table, conn, if_exists="append", index=False)
+    except SQLAlchemyError as exc:
+        raise RuntimeError(f"PostgreSQL insert failed: {exc}") from exc
+    print("    ✓ Load complete")
+
+if __name__ == "__main__":
+    import yaml
+    import pandas as pd
+
+    # dummy dataframe
+    df_test = pd.DataFrame(
+        {"code": ["USD", "EUR"], "rate": [4.0, 4.5], "type": ["fiat", "fiat"]}
+    )
+
+    cfg = yaml.safe_load(open("config.yaml"))
+    load(df_test, cfg)

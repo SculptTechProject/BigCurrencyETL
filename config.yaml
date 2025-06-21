@@ -1,0 +1,12 @@
+postgres:
+  host: db
+  port: 5432
+  user: etl
+  password: etl
+  db: etl
+  sslmode: disable # for local, if want to use database from ex. aiven please use: enable
+  sslrootcert: ""  # path to cert if needed
+
+sources:
+  nbp_api: "http://api.nbp.pl/api/exchangerates/tables/A?format=json"
+  crypto_api: "https://api.coingecko.com/api/v3/simple/price?ids=bitcoin,ethereum&vs_currencies=usd"
